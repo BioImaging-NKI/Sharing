@@ -1,3 +1,8 @@
+import numpy as np
+import skimage as ski
+from pathlib import Path
+import json
+
 class Warpytransform:
     def __init__(self, transformdata):
         self.affine_1 = self._reshape_affine(np.array(transformdata['realTransform_0']['affinetransform3d']))
@@ -9,9 +14,9 @@ class Warpytransform:
         srcPts = np.transpose(np.array(tps['srcPts']))
         tgtPts = np.transpose(np.array(tps['tgtPts']))
         self.tps = ski.transform.ThinPlateSplineTransform()
-        self.tps.estimate(srcPts, tgtPts)
+        self.tps.from_estimate(srcPts, tgtPts)
         self.i_tps = ski.transform.ThinPlateSplineTransform()
-        self.i_tps.estimate(tgtPts, srcPts)
+        self.i_tps.from_estimate(tgtPts, srcPts)
         affine_tps_approx = np.linalg.lstsq(np.hstack((srcPts, np.ones((srcPts.shape[0],1)))), tgtPts)[0]
         self.affine_tps = np.hstack((affine_tps_approx,np.array([[0,0,1]]).T))
     def _reshape_affine(self, array_in):
@@ -40,4 +45,7 @@ class Warpytransform:
         c = np.hstack((coords, np.ones((coords.shape[0],1))))
         c = np.dot(np.dot(np.dot(c, self.affine_1), self.affine_tps), self.affine_2)
         return c[:,0:2]
+
+with open(Path(Path.cwd(), 'transform.json')) as fp:
+    transformdata = json.load(fp)
 warpytransform = Warpytransform(transformdata)
